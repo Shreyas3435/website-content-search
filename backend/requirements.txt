@@ -1,0 +1,7 @@
+flask
+requests
+beautifulsoup4
+weaviate-client>=4.0.0
+transformers
+nltk
+flask-cors
