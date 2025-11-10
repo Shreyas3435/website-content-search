@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-# Initialize sentence transformer for embeddings
+
 embedder = SentenceTransformer('all-MiniLM-L6-v2')
 
-# Connect to Weaviate
+
 client = weaviate.connect_to_local(
     host="localhost",
     port=8080,
@@ -28,11 +28,11 @@ def clean_html(html_content):
     """Extract clean text from HTML"""
     soup = BeautifulSoup(html_content, "html.parser")
     
-    # Remove script, style, and other non-content tags
+    
     for script in soup(["script", "style", "nav", "footer", "header"]):
         script.decompose()
     
-    # Get text and clean up whitespace
+
     text = soup.get_text(separator=" ")
     lines = (line.strip() for line in text.splitlines())
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
@@ -49,7 +49,7 @@ def chunk_text(text, max_tokens=400):
     for i in range(0, len(tokens), max_tokens):
         chunk_tokens = tokens[i:i + max_tokens]
         chunk = tokenizer.convert_tokens_to_string(chunk_tokens)
-        if chunk.strip():  # Only add non-empty chunks
+        if chunk.strip(): 
             chunks.append(chunk.strip())
     
     return chunks
@@ -57,11 +57,11 @@ def chunk_text(text, max_tokens=400):
 def ensure_collection_exists():
     """Create the HtmlChunk collection if it doesn't exist"""
     try:
-        # Try to get the collection
+        
         client.collections.get("HtmlChunk")
         logger.info("Collection 'HtmlChunk' already exists")
     except Exception as e:
-        # Collection doesn't exist, create it
+        
         logger.info("Creating collection 'HtmlChunk'")
         client.collections.create(
             name="HtmlChunk",
@@ -85,12 +85,12 @@ def store_chunks(chunks, url):
     ensure_collection_exists()
     collection = client.collections.get("HtmlChunk")
     
-    # Clear previous data to avoid mixing results from different URLs
+  
     clear_collection()
     
     data_objects = []
     for chunk in chunks:
-        # Generate embedding
+       
         embedding = embedder.encode(chunk).tolist()
         
         data_objects.append({
@@ -99,7 +99,7 @@ def store_chunks(chunks, url):
             "vector": embedding
         })
     
-    # Batch insert
+  
     if data_objects:
         with collection.batch.dynamic() as batch:
             for obj in data_objects:
@@ -114,10 +114,10 @@ def search_chunks(query, limit=10):
     """Search for relevant chunks using vector similarity"""
     collection = client.collections.get("HtmlChunk")
     
-    # Generate query embedding
+   
     query_embedding = embedder.encode(query).tolist()
     
-    # Perform vector search
+   
     response = collection.query.near_vector(
         near_vector=query_embedding,
         limit=limit,
@@ -146,7 +146,7 @@ def search():
     try:
         logger.info(f"Fetching URL: {url}")
         
-        # Fetch the webpage
+       
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
@@ -171,7 +171,7 @@ def search():
         logger.info(f"Searching for: {query}")
         matches = search_chunks(query, limit=10)
         
-        # Extract just the content for response
+        
         results = [match["content"] for match in matches]
         
         return jsonify({
@@ -190,7 +190,7 @@ def search():
 def health():
     """Health check endpoint"""
     try:
-        # Check Weaviate connection
+        
         client.collections.list_all()
         return jsonify({"status": "healthy", "weaviate": "connected"}), 200
     except Exception as e:
